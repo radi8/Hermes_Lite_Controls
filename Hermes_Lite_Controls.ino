@@ -23,7 +23,13 @@ Arduino Nano Manual         ... https://www.arduino.cc/en/uploads/Main/ArduinoNa
 
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
+
+
 // Debug Defines follow here
+
+
+// Option defines follow here
+#define OPTION_Invert_Inputs    // Allows inverting or non-inverting buffers from HL to Arduino
 
 // PIN ASSIGNMENT defines follow here
 
@@ -32,9 +38,10 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 #define user1          A1 // Connected to CN2 pin 2, USER1
 #define user2          A2 // Connected to CN2 pin 1, USER2
 #define user3          A3 // Connected to CN2 pin 7, USER3
-#define pttIn          A6 // Connected to CN2 pin 4, PTT#
+#define pttIn          10 // Connected to CN2 pin 4, PTT#
 // Input Pins - Analog used as analog
-#define fwdPwr         A7 // Connected to users power output metering
+#define fwdPwr         A6 // Connected to users power output metering
+#define swr            A7 // Connected to users power output metering
 
 /* Not enough available input pins to connect these at present
 #define user4          d3 // Connected to CN2 pin 8, USER4
@@ -53,7 +60,7 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 #define Filter5        7
 #define Filter6        8
 #define Filter7        9
-#define Filter8        10
+//#define Filter8        10
 #define pttOut         11
 #define paBiasOut      12
 #define LEDpin         13   // A LED is connected to this pin, use for heartbeat
@@ -93,11 +100,11 @@ byte p6[8] = {
 
 void setup() {
 // Setup inputs. Any defined outputs default to no pullups enabled
-  pinMode(pttIn, INPUT);
   pinMode(user0, INPUT);
   pinMode(user1, INPUT);
   pinMode(user2, INPUT);
   pinMode(user3, INPUT);
+  pinMode(pttIn, INPUT);
 /* Not enough available input pins to connect these at present
   pinMode(user4, INPUT);
   pinMode(user5, INPUT);
@@ -119,7 +126,7 @@ void setup() {
   pinMode(Filter5, OUTPUT);
   pinMode(Filter6, OUTPUT);
   pinMode(Filter7, OUTPUT);
-  pinMode(Filter8, OUTPUT);
+//  pinMode(Filter8, OUTPUT);
 
   
   lcd.begin(lcdNumRows, lcdNumCols);
@@ -156,7 +163,7 @@ void loop() {
   // similar until
   // bit 6 holds USER6 value (0 or 1)
   // bit 7 holds PTT# value (0 or 1)
-  static byte fpgaState = 0; // On Rx with through filter selected
+  static byte fpgaState = 0; // On Rx, with through filter selected
   
   byte fpgaStateTmp;
   byte cnt;
@@ -164,7 +171,18 @@ void loop() {
   boolean filtersChanged;
 
   // Read the inputs from fpga and temporary store
+  // DEBUG I have inverted inputs as they are held Hi by pullups
   cnt = 0;
+#ifdef OPTION_Invert_Inputs
+  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user0));
+  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user1));
+  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user2));
+  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user3));
+  bitWrite(fpgaStateTmp, cnt++, 0);
+  bitWrite(fpgaStateTmp, cnt++, 0);
+  bitWrite(fpgaStateTmp, cnt++, 0);
+  bitWrite(fpgaStateTmp, cnt, !digitalRead(pttIn));
+#else
   bitWrite(fpgaStateTmp, cnt++, digitalRead(user0));
   bitWrite(fpgaStateTmp, cnt++, digitalRead(user1));
   bitWrite(fpgaStateTmp, cnt++, digitalRead(user2));
@@ -173,7 +191,7 @@ void loop() {
   bitWrite(fpgaStateTmp, cnt++, 0);
   bitWrite(fpgaStateTmp, cnt++, 0);
   bitWrite(fpgaStateTmp, cnt, digitalRead(pttIn));
-  
+#endif
 
 /* We could be working crossband so if going from Rx to Tx it is important to switch the filters
    and then key the transmitter. Otherwise from Tx to Rx we unkey transmitter then switch filters.
@@ -239,8 +257,8 @@ void switchFilters(byte filterNum) {
   digitalWrite(Filter5, LOW);
   digitalWrite(Filter6, LOW);
   digitalWrite(Filter7, LOW);
-  digitalWrite(Filter8, LOW);
-  digitalWrite(LEDpinFilter8, LOW);
+//  digitalWrite(Filter8, LOW);
+  digitalWrite(LEDpin, LOW);
   
   Serial.print("filterNum = "); Serial.println(filterNum);
   switch (filterNum) {
@@ -267,9 +285,6 @@ void switchFilters(byte filterNum) {
       break;
     case 7:
       digitalWrite(Filter7, HIGH);
-      break;
-    case 8:
-      digitalWrite(Filter8, HIGH);
       break;
     case 11:
       digitalWrite(LEDpin, HIGH);
