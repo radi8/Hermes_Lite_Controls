@@ -17,6 +17,32 @@ HL Protocol matching Hermes ... https://github.com/softerhardware/Hermes-Lite/wi
 John Williams J16 proposal  ... https://docs.google.com/viewer?a=v&pid=forums&srcid=MTY4NjY5MjUzNTgyMDIxNjk5MDkBMDY0MDk1MDI1ODgzNzI5ODYwNDMBd0VrOTVFUVQ5Q1VKATAuMQEBdjI
 Arduino Nano Manual         ... https://www.arduino.cc/en/uploads/Main/ArduinoNanoManual23.pdf
 */
+/*
+                               +-----+
+                  +------------| USB |------------+
+                  |            +-----+            |
+PTT out      B5   | [ ]D13/SCK        MISO/D12[ ] |   B4 N/C
+                  | [ ]3.3V           MOSI/D11[ ]~|   B3 PA Bias   (Output)
+                  | [ ]V.ref     ___    SS/D10[ ]~|   B2 Filter 7  (Output)
+USER0        C0   | [ ]A0       / N \       D9[ ]~|   B1 Filter 6  (Output)
+USER1        C1   | [ ]A1      /  A  \      D8[ ] |   B0 Filter 5  (Output)
+USER2        C2   | [ ]A2      \  N  /      D7[ ] |   D7 Filter 4  (Output)
+USER3        C3   | [ ]A3       \_0_/       D6[ ]~|   D6 Filter 3  (Output)
+I2C Bus      C4   | [ ]A4/SDA               D5[ ]~|   D5 Filter 2  (Output)
+I2C Bus      C5   | [ ]A5/SCL               D4[ ] |   D4 Filter 1  (Output)
+Fwd Pwr           | [ ]A6              INT1/D3[ ]~|   D3 Thru Filt (Output)
+Rev Pwr           | [ ]A7              INT0/D2[ ] |   D2 PTT in    (Input)
+                  | [ ]5V                  GND[ ] |     
+             C6   | [ ]RST                 RST[ ] |   C6
+                  | [ ]GND   5V MOSI GND   TX1[ ] |   D0
++12v Pwr          | [ ]Vin   [ ] [ ] [ ]   RX1[ ] |   D1
+                  |          [ ] [ ] [ ]          |
+                  |          MISO SCK RST         |
+                  | NANO-V3                       |
+                  +-------------------------------+
+         
+                  http://busyducks.com/ascii-art-arduinos
+*/
 
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
@@ -38,10 +64,11 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 #define user1          A1 // Connected to CN2 pin 2, USER1
 #define user2          A2 // Connected to CN2 pin 1, USER2
 #define user3          A3 // Connected to CN2 pin 7, USER3
-#define pttIn          10 // Connected to CN2 pin 4, PTT#
+#define pttIn          2  // Connected to CN2 pin 4, PTT#
 // Input Pins - Analog used as analog
 #define fwdPwr         A6 // Connected to users power output metering
 #define swr            A7 // Connected to users power output metering
+#define pttIn          d2
 
 /* Not enough available input pins to connect these at present
 #define user4          d3 // Connected to CN2 pin 8, USER4
@@ -52,17 +79,16 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 */
 
 // Output Pins
-#define ThroughFilter  2
-#define Filter1        3
-#define Filter2        4
-#define Filter3        5
-#define Filter4        6
-#define Filter5        7
-#define Filter6        8
-#define Filter7        9
-//#define Filter8        10
-#define pttOut         11
-#define paBiasOut      12
+#define ThroughFilter  3
+#define Filter1        4
+#define Filter2        5
+#define Filter3        6
+#define Filter4        7
+#define Filter5        8
+#define Filter6        9
+#define Filter7        10
+#define paBias         11
+#define pttOut         13
 #define LEDpin         13   // A LED is connected to this pin, use for heartbeat
 
 // I/O Pins
@@ -74,7 +100,7 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
 // Setup LCD stuff for 16 col x 2 row display
 #define lcdNumCols 16 // -- number of columns in the LCD
-#define lcdNumRows  2 // -- number of rowss in the LCD
+#define lcdNumRows  2 // -- number of rows in the LCD
 // set the LCD address to 0x27 for a 20 chars 4 line display
 // Set the pins on the I2C chip used for LCD connections:
 //                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
@@ -99,7 +125,7 @@ byte p6[8] = {
 /**********************************************************************************************************/
 
 void setup() {
-// Setup inputs. Any defined outputs default to no pullups enabled
+// Setup inputs. Any defined inputs default to no pullups enabled
   pinMode(user0, INPUT);
   pinMode(user1, INPUT);
   pinMode(user2, INPUT);
@@ -114,7 +140,7 @@ void setup() {
   digitalWrite(user1, HIGH);
   digitalWrite(user2, HIGH);
   digitalWrite(user3, HIGH);
-  digitalWrite(pttIn, HIGH);
+//  digitalWrite(pttIn, HIGH);
 
 // Setup outputs. Any defined outputs default to LOW (false or 0)
   pinMode(pttOut, OUTPUT);
@@ -126,7 +152,7 @@ void setup() {
   pinMode(Filter5, OUTPUT);
   pinMode(Filter6, OUTPUT);
   pinMode(Filter7, OUTPUT);
-//  pinMode(Filter8, OUTPUT);
+  pinMode(paBias, OUTPUT);
 
   
   lcd.begin(lcdNumRows, lcdNumCols);
@@ -155,7 +181,7 @@ void setup() {
 }
 /**********************************************************************************************************/
 /* The main loop spends most of its time polling the control data lines from Hermes-Lite. Subroutines
-   should be written to be non blocking.
+   should be written to be non blocking. PTT is on an interrupt for instant response.
 */   
 void loop() {
   // bit values for fpgaState ...
