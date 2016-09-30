@@ -50,6 +50,30 @@ Rev Pwr           | [ ]A7              INT0/D2[ ] |   D2 PTT in    (Input)
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
 
+// Latch stuff
+
+// Shift Register for L & C driver Pin assign
+#define outputEnable  4     // Pin 11 of 74HC595 U5 to pin 7 of Arduino Nano
+
+#define Lclock        8     // Pin 11 of 74HC595 U3 to pin 11 of Arduino Nano
+#define Llatch        7     // Pin 12 of 74HC595 U4 to pin 10 of Arduino Nano
+#define Ldata         6     // Pin 14 of 74HC595 U3 to pin 9 of Arduino Nano
+/*
+  // Set the C Relays from _status.C_relays;
+  digitalWrite(Llatch, LOW);
+  temp = bitRead(Cmap, 7);
+  Cmap = Cmap << 1;
+  bitWrite(Cmap, 0, temp);
+  shiftOut(Ldata, Lclock, MSBFIRST, Cmap); // send this binary value to the Capacitor shift register
+
+  // Set the L Relays from _status.L_relays;
+  temp = bitRead(Lmap, 7);
+  Lmap = Lmap << 1;
+  bitWrite(Lmap, 0, temp);
+  shiftOut(Ldata, Lclock, MSBFIRST, Lmap); // send this binary value to the Inductor shift register
+  digitalWrite(Llatch, HIGH);
+*/
+
 
 // Debug Defines follow here
 
@@ -64,11 +88,11 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 #define user1          A1 // Connected to CN2 pin 2, USER1
 #define user2          A2 // Connected to CN2 pin 1, USER2
 #define user3          A3 // Connected to CN2 pin 7, USER3
-#define pttIn          2  // Connected to CN2 pin 4, PTT#
+//#define pttIn          2  // Connected to CN2 pin 4, PTT#
 // Input Pins - Analog used as analog
 #define fwdPwr         A6 // Connected to users power output metering
 #define swr            A7 // Connected to users power output metering
-#define pttIn          d2
+#define pttIn          2  // Connected to CN2 pin 4, PTT#
 
 /* Not enough available input pins to connect these at present
 #define user4          d3 // Connected to CN2 pin 8, USER4
@@ -242,10 +266,10 @@ void loop() {
       }
       digitalWrite(pttOut, HIGH);
       delay(PA_biasDelay);
-      digitalWrite(paBiasOut, HIGH);
+      digitalWrite(paBias, HIGH);
     }
     else { // We are going from Tx to Rx
-      digitalWrite(paBiasOut, LOW);
+      digitalWrite(paBias, LOW);
       digitalWrite(pttOut, LOW);
       if(filtersChanged) { // Set correct Rx filter
         switchFilters(fpgaStateTmp & B01111111);
@@ -257,7 +281,7 @@ void loop() {
   }
   if(filtersChanged) {
     if(bitRead(fpgaStateTmp, 7)) { //Go back to Rx as switching filters while Tx is an error condition
-      digitalWrite(paBiasOut, LOW);
+      digitalWrite(paBias, LOW);
       digitalWrite(pttOut, LOW);
     }
     switchFilters(fpgaStateTmp & B01111111);
