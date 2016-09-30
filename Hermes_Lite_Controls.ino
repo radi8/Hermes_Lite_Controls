@@ -21,17 +21,17 @@ Arduino Nano Manual         ... https://www.arduino.cc/en/uploads/Main/ArduinoNa
                                +-----+
                   +------------| USB |------------+
                   |            +-----+            |
-PTT out      B5   | [ ]D13/SCK        MISO/D12[ ] |   B4 N/C
-                  | [ ]3.3V           MOSI/D11[ ]~|   B3 PA Bias   (Output)
-                  | [ ]V.ref     ___    SS/D10[ ]~|   B2 Filter 7  (Output)
-USER0        C0   | [ ]A0       / N \       D9[ ]~|   B1 Filter 6  (Output)
-USER1        C1   | [ ]A1      /  A  \      D8[ ] |   B0 Filter 5  (Output)
-USER2        C2   | [ ]A2      \  N  /      D7[ ] |   D7 Filter 4  (Output)
-USER3        C3   | [ ]A3       \_0_/       D6[ ]~|   D6 Filter 3  (Output)
-I2C Bus      C4   | [ ]A4/SDA               D5[ ]~|   D5 Filter 2  (Output)
-I2C Bus      C5   | [ ]A5/SCL               D4[ ] |   D4 Filter 1  (Output)
-Fwd Pwr           | [ ]A6              INT1/D3[ ]~|   D3 Thru Filt (Output)
-Rev Pwr           | [ ]A7              INT0/D2[ ] |   D2 PTT in    (Input)
+PTT out      B5   | [ ]D13/SCK        MISO/D12[ ] |   B4 PA Bias   (Output)
+                  | [ ]3.3V           MOSI/D11[ ]~|   B3 Lclock    (Output) to Pin 11 of 74HC595
+                  | [ ]V.ref     ___    SS/D10[ ]~|   B2 Llatch    (Output) to Pin 12 of 74HC595
+USER0        C0   | [ ]A0       / N \       D9[ ]~|   B1 Ldata     (Output) to Pin 14 of 74HC595
+USER1        C1   | [ ]A1      /  A  \      D8[ ] |   B0 Filter 6  (Output)
+USER2        C2   | [ ]A2      \  N  /      D7[ ] |   D7 Filter 5  (Output)
+USER3        C3   | [ ]A3       \_0_/       D6[ ]~|   D6 Filter 4  (Output)
+I2C Bus      C4   | [ ]A4/SDA               D5[ ]~|   D5 Filter 3  (Output)
+I2C Bus      C5   | [ ]A5/SCL               D4[ ] |   D4 Filter 2  (Output)
+Latch OP enable   | [ ]A6              INT1/D3[ ]~|   D3 Filter 1  (Output)
+N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in    (Input)
                   | [ ]5V                  GND[ ] |     
              C6   | [ ]RST                 RST[ ] |   C6
                   | [ ]GND   5V MOSI GND   TX1[ ] |   D0
@@ -52,18 +52,14 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
 // Latch stuff
 
-// Shift Register for L & C driver Pin assign
-#define outputEnable  4     // Pin 11 of 74HC595 U5 to pin 7 of Arduino Nano
-
-#define Lclock        8     // Pin 11 of 74HC595 U3 to pin 11 of Arduino Nano
-#define Llatch        7     // Pin 12 of 74HC595 U4 to pin 10 of Arduino Nano
-#define Ldata         6     // Pin 14 of 74HC595 U3 to pin 9 of Arduino Nano
+// Shift Register for Rx Filter Pin assignments
+#define outputEnable A6     // Pin 11 of 74HC595 U5 to pin 7 of Arduino Nano
+#define Lclock       11     // Pin 11 of 74HC595 U3 to pin 14 of Arduino Nano
+#define Llatch       10     // Pin 12 of 74HC595 U4 to pin 13 of Arduino Nano
+#define Ldata         9     // Pin 14 of 74HC595 U3 to pin 12 of Arduino Nano
 /*
   // Set the C Relays from _status.C_relays;
   digitalWrite(Llatch, LOW);
-  temp = bitRead(Cmap, 7);
-  Cmap = Cmap << 1;
-  bitWrite(Cmap, 0, temp);
   shiftOut(Ldata, Lclock, MSBFIRST, Cmap); // send this binary value to the Capacitor shift register
 
   // Set the L Relays from _status.L_relays;
@@ -345,6 +341,48 @@ void switchFilters(byte filterNum) {
 }
 
 /**********************************************************************************************************/
+
+void switchRxFilters(byte filterNum) {
+  
+/*
+  switch (filterNum) {
+    case 0:
+      digitalWrite(ThroughFilter, HIGH);
+      break;
+    case 1:
+      digitalWrite(Filter1, HIGH);
+      break;
+    case 2:
+      digitalWrite(LEDpin, HIGH);
+      break;
+    case 3:
+      digitalWrite(Filter3, HIGH);
+      break;
+    case 4:
+      digitalWrite(Filter4, HIGH);
+      break;
+    case 5:
+      digitalWrite(Filter5, HIGH);
+      break;
+    case 6:
+      digitalWrite(Filter6, HIGH);
+      break;
+    case 7:
+      digitalWrite(Filter7, HIGH);
+      break;
+    case 11:
+      digitalWrite(LEDpin, HIGH);
+      break;
+    default:
+      digitalWrite(ThroughFilter, HIGH);  
+  } 
+*/       
+  digitalWrite(Llatch, LOW);
+  shiftOut(Ldata, Lclock, MSBFIRST, filterNum); // send this binary value to the Capacitor shift register
+  digitalWrite(Llatch, HIGH);
+}
+
+  /**********************************************************************************************************/
 
 int freeRam () {
   extern int __heap_start, *__brkval;
