@@ -55,6 +55,8 @@ N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in       (Input)
 
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
+#define CODE_VERSION "0.1.20161001"
+
 
 // Latch stuff
 
@@ -181,6 +183,8 @@ void setup() {
   }
   Serial.println(F("Arduino Hermes-Lite control line expander ver 0.1.0"));
   Serial.println(F("Copyright (C) 2015, Graeme Jury ZL2APV"));
+  Serial.print(F("Code Version = "));
+  Serial.println(CODE_VERSION);
   Serial.print(F("available RAM = "));
   Serial.println(freeRam());
   Serial.println();
@@ -199,8 +203,8 @@ void loop() {
   
   uint8_t fpgaStateTmp;
   uint8_t cnt;
-  boolean pttChanged;
-  boolean filtersChanged;
+  boolean pttChanged = true;  // Force a state write to the ptt line on switch on
+  boolean filtersChanged = true; // and same for the Tx and Rx filters
 
   // Read the inputs from fpga and temporary store
   // DEBUG I have inverted inputs as they are held Hi by pullups
@@ -225,25 +229,32 @@ void loop() {
   bitWrite(fpgaStateTmp, cnt, digitalRead(pttIn));
 #endif
 
-#ifdef DEBUG_LEVEL_3
-  Serial.print(F("Input word = "));
-  Serial.println(fpgaStateTmp, BIN);
-#endif
+
 /* We could be working crossband so if going from Rx to Tx it is important to switch the filters
    and then key the transmitter. Otherwise from Tx to Rx we unkey transmitter then switch filters.
 */
   // See if the ptt has changed and flag if so
-  pttChanged = false;
+//  pttChanged = false; //todo probably delete this
   if(bitRead(fpgaState, 7) != bitRead(fpgaStateTmp, 7)) pttChanged = true;
   
   // See if the filter selection has changed and flag if so
-  filtersChanged = false;
+//  filtersChanged = false; //todo probably delete this
   if((fpgaState & B01111111) != (fpgaStateTmp & B01111111)) {
     filtersChanged = true;
 //    Serial.print("the value of user2 = "); Serial.println(digitalRead(user2));
-    Serial.print("the value of fpgaState = "); Serial.print(fpgaState);
-    Serial.print(" and fpgaStateTmp = "); Serial.println(fpgaStateTmp);
-  }  
+//    Serial.print("the value of fpgaState = "); Serial.print(fpgaState, BIN);
+//    Serial.print(" and fpgaStateTmp = "); Serial.println(fpgaStateTmp, BIN);
+  }
+
+#ifdef DEBUG_LEVEL_3
+  if(pttChanged || filtersChanged) {
+    Serial.print(F("Input word = "));
+    Serial.println(fpgaStateTmp, BIN);
+    Serial.print(F("Last state = "));
+    Serial.println(fpgaState, BIN);
+  }
+#endif
+    
   // Here is where we process any changed condition from Hermes-Lite
   if(pttChanged) {
     if(bitRead(fpgaStateTmp, 7)) { //We are going from Rx to Tx
