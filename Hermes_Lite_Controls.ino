@@ -21,17 +21,17 @@ Arduino Nano Manual         ... https://www.arduino.cc/en/uploads/Main/ArduinoNa
                                +-----+
                   +------------| USB |------------+
                   |            +-----+            |
-PTT out      B5   | [ ]D13/SCK        MISO/D12[ ] |   B4 PA Bias   (Output)
-                  | [ ]3.3V           MOSI/D11[ ]~|   B3 Lclock    (Output) to Pin 11 of 74HC595
-                  | [ ]V.ref     ___    SS/D10[ ]~|   B2 Llatch    (Output) to Pin 12 of 74HC595
-USER0        C0   | [ ]A0       / N \       D9[ ]~|   B1 Ldata     (Output) to Pin 14 of 74HC595
-USER1        C1   | [ ]A1      /  A  \      D8[ ] |   B0 Filter 6  (Output)
-USER2        C2   | [ ]A2      \  N  /      D7[ ] |   D7 Filter 5  (Output)
-USER3        C3   | [ ]A3       \_0_/       D6[ ]~|   D6 Filter 4  (Output)
-I2C Bus      C4   | [ ]A4/SDA               D5[ ]~|   D5 Filter 3  (Output)
-I2C Bus      C5   | [ ]A5/SCL               D4[ ] |   D4 Filter 2  (Output)
-Latch OP enable   | [ ]A6              INT1/D3[ ]~|   D3 Filter 1  (Output)
-N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in    (Input)
+PTT out      B5   | [ ]D13/SCK        MISO/D12[ ] |   B4 PA Bias      (Output)
+                  | [ ]3.3V           MOSI/D11[ ]~|   B3 Lclock       (Output) to Pin 11 of 74HC595
+                  | [ ]V.ref     ___    SS/D10[ ]~|   B2 Llatch       (Output) to Pin 12 of 74HC595
+USER0        C0   | [ ]A0       / N \       D9[ ]~|   B1 Ldata        (Output) to Pin 14 of 74HC595
+USER1        C1   | [ ]A1      /  A  \      D8[ ] |   B0 LatchEnable  (Output)
+USER2        C2   | [ ]A2      \  N  /      D7[ ] |   D7 Unused       (Output)
+USER3        C3   | [ ]A3       \_0_/       D6[ ]~|   D6 Filter 4     (Output)
+I2C Bus      C4   | [ ]A4/SDA               D5[ ]~|   D5 Filter 3     (Output)
+I2C Bus      C5   | [ ]A5/SCL               D4[ ] |   D4 Filter 2     (Output)
+N/C               | [ ]A6              INT1/D3[ ]~|   D3 Filter 1     (Output)
+N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in       (Input)
                   | [ ]5V                  GND[ ] |     
              C6   | [ ]RST                 RST[ ] |   C6
                   | [ ]GND   5V MOSI GND   TX1[ ] |   D0
@@ -59,29 +59,11 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 // Latch stuff
 
 // Shift Register for Rx Filter Pin assignments
-#define outputEnable A6     // Pin 11 of 74HC595 U5 to pin 7 of Arduino Nano
-#define Lclock       11     // Pin 11 of 74HC595 U3 to pin 14 of Arduino Nano
-#define Llatch       10     // Pin 12 of 74HC595 U4 to pin 13 of Arduino Nano
-#define Ldata         9     // Pin 14 of 74HC595 U3 to pin 12 of Arduino Nano
-/*
-  // Set the C Relays from _status.C_relays;
-  digitalWrite(Llatch, LOW);
-  shiftOut(Ldata, Lclock, MSBFIRST, Cmap); // send this binary value to the Capacitor shift register
+#define Lclock       11     // Pin 11 of 74HC595 to pin 14 of Arduino Nano
+#define Llatch       10     // Pin 12 of 74HC595 to pin 13 of Arduino Nano
+#define Ldata         9     // Pin 14 of 74HC595 to pin 12 of Arduino Nano
+#define LEnable       8     // Pin ?? of 74HC595 to pin 11 of Arduino Nano
 
-  // Set the L Relays from _status.L_relays;
-  temp = bitRead(Lmap, 7);
-  Lmap = Lmap << 1;
-  bitWrite(Lmap, 0, temp);
-  shiftOut(Ldata, Lclock, MSBFIRST, Lmap); // send this binary value to the Inductor shift register
-  digitalWrite(Llatch, HIGH);
-*/
-
-
-// Debug Defines follow here
-
-
-// Option defines follow here
-#define OPTION_Invert_Inputs    // Allows inverting or non-inverting buffers from HL to Arduino
 
 // PIN ASSIGNMENT defines follow here
 
@@ -105,14 +87,12 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 */
 
 // Output Pins
-#define ThroughFilter  3
+//#define ThroughFilter  3
 #define Filter1        4
 #define Filter2        5
 #define Filter3        6
 #define Filter4        7
-#define Filter5        8
-#define Filter6        9
-#define Filter7        10
+#define latchEnable     9
 #define paBias         11
 #define pttOut         13
 #define LEDpin         13   // A LED is connected to this pin, use for heartbeat
@@ -172,14 +152,10 @@ void setup() {
 
 // Setup outputs. Any defined outputs default to LOW (false or 0)
   pinMode(pttOut, OUTPUT);
-  pinMode(ThroughFilter, OUTPUT);
   pinMode(Filter1, OUTPUT);
   pinMode(Filter2, OUTPUT);
   pinMode(Filter3, OUTPUT);
   pinMode(Filter4, OUTPUT);
-  pinMode(Filter5, OUTPUT);
-  pinMode(Filter6, OUTPUT);
-  pinMode(Filter7, OUTPUT);
   pinMode(paBias, OUTPUT);
 
 #if defined(FEATURE_I2C_LCD)  
@@ -221,15 +197,15 @@ void loop() {
   // bit 7 holds PTT# value (0 or 1)
   static byte fpgaState = 0; // On Rx, with through filter selected
   
-  byte fpgaStateTmp;
-  byte cnt;
+  uint8_t fpgaStateTmp;
+  uint8_t cnt;
   boolean pttChanged;
   boolean filtersChanged;
 
   // Read the inputs from fpga and temporary store
   // DEBUG I have inverted inputs as they are held Hi by pullups
   cnt = 0;
-#ifdef OPTION_Invert_Inputs
+#ifdef FEATURE_Invert_Inputs
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user0));
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user1));
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user2));
@@ -249,6 +225,10 @@ void loop() {
   bitWrite(fpgaStateTmp, cnt, digitalRead(pttIn));
 #endif
 
+#ifdef DEBUG_LEVEL_3
+  Serial.print(F("Input word = "));
+  Serial.println(fpgaStateTmp, BIN);
+#endif
 /* We could be working crossband so if going from Rx to Tx it is important to switch the filters
    and then key the transmitter. Otherwise from Tx to Rx we unkey transmitter then switch filters.
 */
@@ -303,62 +283,31 @@ void loop() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void switchFilters(byte filterNum) {
-  // In final version translation tables would be used here but I am simply
-  // using filters 1 to 6 as a straight input to output bcd decode
-  digitalWrite(ThroughFilter, LOW); // Clear the previous filters
-  digitalWrite(Filter1, LOW);
-  digitalWrite(Filter2, LOW);
-  digitalWrite(Filter3, LOW);
-  digitalWrite(Filter4, LOW);
-  digitalWrite(Filter5, LOW);
-  digitalWrite(Filter6, LOW);
-  digitalWrite(Filter7, LOW);
-//  digitalWrite(Filter8, LOW);
-  digitalWrite(LEDpin, LOW);
-  
-  Serial.print("filterNum = "); Serial.println(filterNum);
-  switch (filterNum) {
-    case 0:
-      digitalWrite(ThroughFilter, HIGH);
-      break;
-    case 1:
-      digitalWrite(Filter1, HIGH);
-      break;
-    case 2:
-      digitalWrite(LEDpin, HIGH);
-      break;
-    case 3:
-      digitalWrite(Filter3, HIGH);
-      break;
-    case 4:
-      digitalWrite(Filter4, HIGH);
-      break;
-    case 5:
-      digitalWrite(Filter5, HIGH);
-      break;
-    case 6:
-      digitalWrite(Filter6, HIGH);
-      break;
-    case 7:
-      digitalWrite(Filter7, HIGH);
-      break;
-    case 11:
-      digitalWrite(LEDpin, HIGH);
-      break;
-    default:
-      digitalWrite(ThroughFilter, HIGH);  
-  }      
-}
 
-/**********************************************************************************************************/
-
-void switchRxFilters(byte filterNum) {
+  uint8_t txFilter;
+  uint8_t rxFilter;
   
-  filterNum = RxFilterMap[filterNum],
+  rxFilter = RxFilterMap[filterNum],
+
+  // Shift the rxFilter data to the highest 6 bits as we are going to put bit 6 and 5 of the TX Filters
+  // into the 1st 2 locations
+
+  rxFilter = rxFilter << 2;
+  bitWrite(rxFilter, 1, bitRead(txFilter, 5));
+  bitWrite(rxFilter, 0, bitRead(txFilter, 4));
+  txFilter = txFilter && B00000111;
 
   digitalWrite(Llatch, LOW);
-  shiftOut(Ldata, Lclock, MSBFIRST, filterNum); // send this binary value to the Capacitor shift register
+  shiftOut(Ldata, Lclock, MSBFIRST, rxFilter); // send rxFilter signals and top 2 bits of txFilter signals.
   digitalWrite(Llatch, HIGH);
+  if(bitRead(txFilter, 5)) digitalWrite(Filter1, HIGH);
+  else digitalWrite(Filter1, LOW);
+  if(bitRead(txFilter, 5)) digitalWrite(Filter2, HIGH);
+  else digitalWrite(Filter2, LOW);
+  if(bitRead(txFilter, 5)) digitalWrite(Filter3, HIGH);
+  else digitalWrite(Filter3, LOW);
+  if(bitRead(txFilter, 5)) digitalWrite(Filter4, HIGH);
+  else digitalWrite(Filter4, LOW);
 }
 
   /**********************************************************************************************************/
