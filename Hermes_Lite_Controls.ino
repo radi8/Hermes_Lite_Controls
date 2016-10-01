@@ -74,28 +74,18 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 #define user1          A1 // Connected to CN2 pin 2, USER1
 #define user2          A2 // Connected to CN2 pin 1, USER2
 #define user3          A3 // Connected to CN2 pin 7, USER3
-//#define pttIn          2  // Connected to CN2 pin 4, PTT#
 // Input Pins - Analog used as analog
 #define fwdPwr         A6 // Connected to users power output metering
 #define swr            A7 // Connected to users power output metering
 #define pttIn          2  // Connected to CN2 pin 4, PTT#
 
-/* Not enough available input pins to connect these at present
-#define user4          d3 // Connected to CN2 pin 8, USER4
-#define user5          d3 // Connected to CN2 pin 9, USER5
-#define user6          d3 // Connected to CN2 pin 10, USER6
-#define swr            A7 // Connected to users swr metering
-#define swr            A2 // Connected to users rotator position potentiometer
-*/
-
 // Output Pins
-//#define ThroughFilter  3
 #define Filter1        4
 #define Filter2        5
 #define Filter3        6
 #define Filter4        7
-#define latchEnable     9
-#define paBias         11
+
+#define paBias         12
 #define pttOut         13
 #define LEDpin         13   // A LED is connected to this pin, use for heartbeat
 
@@ -103,8 +93,9 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 #define I2C_sda        A4
 #define I2C_scl        A5
 
-// System constants defined here (TODO convert to statics)
-#define PA_biasDelay 20    //PA bias delay in mSec
+// System constants defined here
+const uint8_t PA_biasDelay = 20;    //PA bias delay in mSec
+const uint8_t relaySettleTime = 10;
 
 #if defined(FEATURE_I2C_LCD)
   // Setup LCD stuff for 16 col x 2 row display
@@ -115,7 +106,7 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
   //                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
   LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
   // Bar part block characters definitions. Use lcd.write(6) for an empty bar
-  byte p1[8] = {
+  byte p1[8] = {found
     0x00,0x00,0x10,0x10,0x10,0x10,0x00,0x00}; // 1 part of bar block
   byte p2[8] = {
     0x00,0x00,0x18,0x18,0x18,0x18,0x00,0x00}; // 2
@@ -150,7 +141,7 @@ void setup() {
   digitalWrite(user1, HIGH);
   digitalWrite(user2, HIGH);
   digitalWrite(user3, HIGH);
-//  digitalWrite(pttIn, HIGH);
+  digitalWrite(pttIn, HIGH);
 
 // Setup outputs. Any defined outputs default to LOW (false or 0)
   pinMode(pttOut, OUTPUT);
@@ -203,8 +194,8 @@ void loop() {
   
   uint8_t fpgaStateTmp;
   uint8_t cnt;
-  boolean pttChanged = true;  // Force a state write to the ptt line on switch on
-  boolean filtersChanged = true; // and same for the Tx and Rx filters
+  static boolean pttChanged = true;  // Force a state write to the ptt line on switch on
+  static boolean filtersChanged = true; // and same for the Tx and Rx filters
 
   // Read the inputs from fpga and temporary store
   // DEBUG I have inverted inputs as they are held Hi by pullups
@@ -264,6 +255,9 @@ void loop() {
       digitalWrite(pttOut, HIGH);
       delay(PA_biasDelay);
       digitalWrite(paBias, HIGH);
+#ifdef DEBUG_LEVEL_3
+  Serial.println(F("Going to TRANSMIT"));
+#endif  
     }
     else { // We are going from Tx to Rx
       digitalWrite(paBias, LOW);
@@ -271,6 +265,9 @@ void loop() {
       if(filtersChanged) { // Set correct Rx filter
         switchFilters(fpgaStateTmp & B01111111);
       }
+#ifdef DEBUG_LEVEL_3
+  Serial.println(F("Going to RECEIVE"));
+#endif      
     }
     fpgaState = fpgaStateTmp;
     filtersChanged = false;
