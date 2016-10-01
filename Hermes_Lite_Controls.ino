@@ -44,8 +44,14 @@ N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in    (Input)
                   http://busyducks.com/ascii-art-arduinos
 */
 
-#include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
+#include "Features_and_Settings.h"
+#if defined(FEATURE_I2C_LCD)
+  #include <Wire.h>
+  #include <LiquidCrystal_I2C.h>
+#endif
+
+//#include <Wire.h>
+//<LiquidCrystal_I2C.h>
 
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
@@ -118,28 +124,30 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 // System constants defined here (TODO convert to statics)
 #define PA_biasDelay 20    //PA bias delay in mSec
 
-// Setup LCD stuff for 16 col x 2 row display
-#define lcdNumCols 16 // -- number of columns in the LCD
-#define lcdNumRows  2 // -- number of rows in the LCD
-// set the LCD address to 0x27 for a 20 chars 4 line display
-// Set the pins on the I2C chip used for LCD connections:
-//                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
-// Bar part block characters definitions. Use lcd.write(6) for an empty bar
-byte p1[8] = {
-  0x00,0x00,0x10,0x10,0x10,0x10,0x00,0x00}; // 1 part of bar block
-byte p2[8] = {
-  0x00,0x00,0x18,0x18,0x18,0x18,0x00,0x00}; // 2
-byte p3[8] = {
-  0x00,0x00,0x1C,0x1C,0x1C,0x1C,0x00,0x00}; // 3
-byte p4[8] = {
-  0x00,0x00,0x1E,0x1E,0x1E,0x1E,0x00,0x00}; // 4 parts of bar block
-byte p5[8] = {
-  0x00,0x00,0x1F,0x1F,0x1F,0x1F,0x00,0x00}; // full bar block
-byte p6[8] = {
-  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // blank bar block
+#if defined(FEATURE_I2C_LCD)
+  // Setup LCD stuff for 16 col x 2 row display
+  #define lcdNumCols 16 // -- number of columns in the LCD
+  #define lcdNumRows  2 // -- number of rows in the LCD
+  // set the LCD address to 0x27 for a 20 chars 4 line display
+  // Set the pins on the I2C chip used for LCD connections:
+  //                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
+  LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
+  // Bar part block characters definitions. Use lcd.write(6) for an empty bar
+  byte p1[8] = {
+    0x00,0x00,0x10,0x10,0x10,0x10,0x00,0x00}; // 1 part of bar block
+  byte p2[8] = {
+    0x00,0x00,0x18,0x18,0x18,0x18,0x00,0x00}; // 2
+  byte p3[8] = {
+    0x00,0x00,0x1C,0x1C,0x1C,0x1C,0x00,0x00}; // 3
+  byte p4[8] = {
+    0x00,0x00,0x1E,0x1E,0x1E,0x1E,0x00,0x00}; // 4 parts of bar block
+  byte p5[8] = {
+    0x00,0x00,0x1F,0x1F,0x1F,0x1F,0x00,0x00}; // full bar block
+  byte p6[8] = {
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // blank bar block
+#endif
 
-// Global variables always start with an underscore
+// Global variables always start with a G underscore e.g. G_myGlobal
 
 
 /**********************************************************************************************************/
@@ -174,7 +182,7 @@ void setup() {
   pinMode(Filter7, OUTPUT);
   pinMode(paBias, OUTPUT);
 
-  
+#if defined(FEATURE_I2C_LCD)  
   lcd.begin(lcdNumRows, lcdNumCols);
   //  lcd.clear(); //TODO check if this can be removed as splash will write whole screen
   // -- do some delay: some times I've got broken visualization
@@ -186,6 +194,8 @@ void setup() {
   lcd.createChar(5, p5);
   lcd.createChar(6, p6);
   lcdPrintSplash();
+#endif
+  
   digitalWrite(LEDpin, HIGH);  //Turn LED on
 
   //Initialize serial and wait for port to open:
@@ -344,39 +354,8 @@ void switchFilters(byte filterNum) {
 
 void switchRxFilters(byte filterNum) {
   
-/*
-  switch (filterNum) {
-    case 0:
-      digitalWrite(ThroughFilter, HIGH);
-      break;
-    case 1:
-      digitalWrite(Filter1, HIGH);
-      break;
-    case 2:
-      digitalWrite(LEDpin, HIGH);
-      break;
-    case 3:
-      digitalWrite(Filter3, HIGH);
-      break;
-    case 4:
-      digitalWrite(Filter4, HIGH);
-      break;
-    case 5:
-      digitalWrite(Filter5, HIGH);
-      break;
-    case 6:
-      digitalWrite(Filter6, HIGH);
-      break;
-    case 7:
-      digitalWrite(Filter7, HIGH);
-      break;
-    case 11:
-      digitalWrite(LEDpin, HIGH);
-      break;
-    default:
-      digitalWrite(ThroughFilter, HIGH);  
-  } 
-*/       
+  filterNum = RxFilterMap[filterNum],
+
   digitalWrite(Llatch, LOW);
   shiftOut(Ldata, Lclock, MSBFIRST, filterNum); // send this binary value to the Capacitor shift register
   digitalWrite(Llatch, HIGH);
@@ -391,7 +370,7 @@ int freeRam () {
 }
 
 /**********************************************************************************************************/
-
+#if defined(FEATURE_I2C_LCD)
 void lcdPrintSplash()
 {
   lcd.home();                   // go home
@@ -399,9 +378,9 @@ void lcdPrintSplash()
   lcd.setCursor (0, 1);        // go to the next line
   lcd.print(F("ZL2APV (c) 2015 "));
 }
-
+#endif
 /**********************************************************************************************************/
-
+#if defined(FEATURE_I2C_LCD)
 /*   Display an analog progress bar/s
  The analog input ranges from 0 to 1023 (1024 values) and on a 16 column display will have a
  value 0f 1024/16 = 64 per column. A number like 400 would be represented by 6 full columns i.e.
@@ -441,7 +420,7 @@ void displayAnalog(byte col, byte row, int value)
     lcd.write(6);
   }
 }
-
+#endif
 /**********************************************************************************************************/
 
 
