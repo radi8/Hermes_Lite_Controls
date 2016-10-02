@@ -11,15 +11,23 @@
 //#define DEBUG_LEVEL_2
 #define DEBUG_LEVEL_3
 
-// Available Transmit Filters. Edit the bit associated with the filter to suit wiring of circuit
-
-const uint8_t LP12_10 = 0;  // Released = 10M. Bit 0 = Lo
-const uint8_t LPthru  = 1;  // Operated = thru mode. Bit 0 = Hi
-const uint8_t LP160   = 2;  // Operated = 160M. Bit 1 = Hi
-const uint8_t LP80    = 4;  // Operated = 80M. Bit 2 = Hi
-const uint8_t LP60_40 = 8;  // Operated = 60/40M. Bit 3 = Hi
-const uint8_t LP30_20 = 16; // Operated = 30/0M Bit 4 = Hi
-const uint8_t LP17_15 = 32; // Operated = 17-10M. Bit 5 = Hi
+// Available Transmit Filters. Edit the bit associated with the filter to suit wiring of circuit.
+// Up to 7 filters may be controlled with bit 0 being a special case where when it is released the
+// roofing filter is switched in and when it is operated it is in thru mode where all the filters are
+// bypassed. 
+// bit 0
+const uint8_t LP12_10 = 0;  // Bit 0 clear = 10M filter in circuit
+const uint8_t LPthru  = 1;  // Bit 0 set = thru mode
+// bit 1
+const uint8_t LP160   = 2;  // Bit 1 set = 160M filter selected. Bit 1 clear = filter not selected
+// bit 2
+const uint8_t LP80    = 4;  // Bit 2 set = 160M filter selected. Bit 2 clear = filter not selected
+// bit 3
+const uint8_t LP60_40 = 8;  // Bit 3 set = 60/40M filter selected. Bit 3 clear = filter not selected
+// bit 4
+const uint8_t LP30_20 = 16; // Bit 4 set = 30/20M filter selected. Bit 4 clear = filter not selected
+// bit 5
+const uint8_t LP17_15 = 32; // Bit 5 set = 17/15M filter selected. Bit 5 clear = filter not selected
 
 
 // Available Receive Filters. Edit the bit associated with the filter to suit wiring of circuit
