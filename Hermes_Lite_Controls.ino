@@ -24,8 +24,8 @@ Arduino Nano Manual         ... https://www.arduino.cc/en/uploads/Main/ArduinoNa
 PTT out      B5   | [ ]D13/SCK        MISO/D12[ ] |   B4 PA Bias      (Output)
                   | [ ]3.3V           MOSI/D11[ ]~|   B3 Lclock       (Output) to Pin 11 of 74HC595
                   | [ ]V.ref     ___    SS/D10[ ]~|   B2 Llatch       (Output) to Pin 12 of 74HC595
-USER0        C0   | [ ]A0       / N \       D9[ ]~|   B1 Ldata        (Output) to Pin 14 of 74HC595
-USER1        C1   | [ ]A1      /  A  \      D8[ ] |   B0 LatchEnable  (Output)
+USER0        C0   | [ ]A0       / N \       D9[ ]~|   B1 LatchEnable  (Output) to Pin 13 of 74HC595
+USER1        C1   | [ ]A1      /  A  \      D8[ ] |   B0 Ldata        (Output) to Pin 14 of 74HC595
 USER2        C2   | [ ]A2      \  N  /      D7[ ] |   D7 Unused       (Output)
 USER3        C3   | [ ]A3       \_0_/       D6[ ]~|   D6 Filter 4     (Output)
 I2C Bus      C4   | [ ]A4/SDA               D5[ ]~|   D5 Filter 3     (Output)
@@ -55,7 +55,7 @@ N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in       (Input)
 
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
-#define CODE_VERSION "0.1.20161001"
+#define CODE_VERSION "0.1.20161002"
 
 
 // Latch stuff
@@ -63,8 +63,9 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 // Shift Register for Rx Filter Pin assignments
 #define Lclock       11     // Pin 11 of 74HC595 to pin 14 of Arduino Nano
 #define Llatch       10     // Pin 12 of 74HC595 to pin 13 of Arduino Nano
-#define Ldata         9     // Pin 14 of 74HC595 to pin 12 of Arduino Nano
-#define LEnable       8     // Pin ?? of 74HC595 to pin 11 of Arduino Nano
+#define LEnable       9     // Pin ?? of 74HC595 to pin 11 of Arduino Nano
+#define Ldata         8     // Pin 14 of 74HC595 to pin 12 of Arduino Nano
+
 
 
 // PIN ASSIGNMENT defines follow here
@@ -126,6 +127,13 @@ const uint8_t relaySettleTime = 10;
 /**********************************************************************************************************/
 
 void setup() {
+// Setup Latch pins 
+  pinMode(LEnable, OUTPUT); // Switch off HiZ mode for shift register
+  digitalWrite(LEnable, LOW);
+  pinMode(Lclock, OUTPUT);
+  pinMode(Llatch, OUTPUT);
+  pinMode(Ldata , OUTPUT);
+   
 // Setup inputs. Any defined inputs default to no pullups enabled
   pinMode(user0, INPUT);
   pinMode(user1, INPUT);
@@ -295,7 +303,12 @@ void switchFilters(byte filterNum) {
   uint8_t txFilter;
   uint8_t rxFilter;
   
-  rxFilter = RxFilterMap[filterNum],
+  txFilter = txFilterMap[filterNum],
+  rxFilter = rxFilterMap[filterNum],
+
+  Serial.print(F("filterNum = "));
+  Serial.println(filterNum);
+  Serial.print(F("txFilter = ")); Serial.print(txFilter, BIN); Serial.print(F("; and rxFilter = ")); Serial.println(rxFilter, BIN);
 
   // Shift the rxFilter data to the highest 6 bits as we are going to put bit 6 and 5 of the TX Filters
   // into the 1st 2 locations
@@ -316,6 +329,12 @@ void switchFilters(byte filterNum) {
   else digitalWrite(Filter3, LOW);
   if(bitRead(txFilter, 5)) digitalWrite(Filter4, HIGH);
   else digitalWrite(Filter4, LOW);
+#ifdef DEBUG_LEVEL_3
+    Serial.print(F("Tx Filter output = "));
+    Serial.println(txFilter, BIN);
+    Serial.print(F("Rx Filter output = "));
+    Serial.println(rxFilter, BIN);
+#endif  
 }
 
   /**********************************************************************************************************/

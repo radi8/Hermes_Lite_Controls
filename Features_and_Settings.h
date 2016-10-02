@@ -47,7 +47,7 @@ const uint8_t HP12_10 = 32; // Operated = 17-10M. Bit 5 Hi
 
 #if defined(FEATURE_Quisk)
 
-const uint8_t TxFilterMap[16] = {
+const uint8_t txFilterMap[16] = {
   LP12_10,  // 10 metre Lo Pass in circuit
   LPthru,   // Through pass. i.e. no filters with thru connection
   LP160,    // 10 M LP plus 160 M LP
@@ -65,7 +65,7 @@ const uint8_t TxFilterMap[16] = {
   LPthru,   // Through pass. i.e. no filters with thru connection
   LPthru,   // Through pass. i.e. no filters with thru connection
 };
-const uint8_t RxFilterMap[16] = {
+const uint8_t rxFilterMap[16] = {
   HP160,    // 160 metre Hi Pass in circuit
   HPthru,   // Through pass. i.e. no filters with thru connection
   HP80,     // 160 M HP plus 80 M HP
