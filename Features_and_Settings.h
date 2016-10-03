@@ -34,6 +34,7 @@ const uint8_t LP17_15 = 32; // Bit 5 set = 17/15M filter selected. Bit 5 clear =
 
 const uint8_t HP160   = 0;  // Released = 160M. Bit 0 = Lo
 const uint8_t HPthru  = 1;  // Operated = thru mode; Bit 0 = Hi
+
 const uint8_t HP80_60 = 2;  // Operated = 80M/60.  Bit 1 = Hi
 const uint8_t HP40_30 = 4;  // Operated = 40/30M  Bit 2 Hi
 const uint8_t HP20_17 = 8;  // Operated = 20/17M. Bit 3 Hi
@@ -48,22 +49,22 @@ const uint8_t HP15_10 = 16; // Operated = 15-10M. Bit 4 Hi
 #if defined(FEATURE_Quisk)
 
 const uint8_t txFilterMap[16] = {
-  LP12_10,  // 10 metre Lo Pass in circuit
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LP160,    // 10 M LP plus 160 M LP
-  LP80,     // 40 M band
-  LP60_40,  // 30 M band
-  LP30_20,  // 20 M band
-  LP17_15,  // 17 M band
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
-  LPthru,   // Through pass. i.e. no filters with thru connection
+  LP12_10,  // 0,   No band,      LP12_10 only filter selected (bit 0 = 0)
+  LP160,    // 1,   137 KHz band, LP12_10 and LP160 filters selected (bit1 = 1, bit 0 = 0)
+  LP160,    // 2,   160 M band,   LP12_10 and LP160 filters selected
+  LP80,     // 3,   80 M band,    LP12_10 and LP80 filters selected
+  LP60_40,  // 4,   60 M band,    LP12_10 and LP60_40 filters selected
+  LP60_40,  // 5,   40 M band,    LP12_10 and LP60_40 filters selected
+  LP30_20,  // 6,   30 M band,    LP12_10 and LP30_20 filters selected
+  LP30_20,  // 7,   20 M band,    LP12_10 and LP30_20 filters selected
+  LP17_15,  // 8,   17 M band,    LP12_10 and LP17_15 filters selected
+  LP17_15,  // 9,   15 M band,    LP12_10 and LP17_15 filters selected
+  LP12_10,  // 10,  12 M band,    LP12_10 and LP12_10 filters selected
+  LP12_10,  // 11,  10 M band,    LP12_10 and LP12_10 filters selected
+  LPthru,   // 12,   6 M band,    thru filter selected (bit 0 = 1,  bits 1 to 5 = 0))
+  LPthru,   // 13,  Through pass. i.e. no filters with thru connection
+  LPthru,   // 14,  Through pass. i.e. no filters with thru connection
+  LPthru    // 15,  Through pass. i.e. no filters with thru connection
 };
 const uint8_t rxFilterMap[16] = {
   HP160,    // 0,   No band,      HP160 only filter selected
