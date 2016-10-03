@@ -159,6 +159,9 @@ void setup() {
   pinMode(Filter4, OUTPUT);
   pinMode(paBias, OUTPUT);
 
+  digitalWrite(pttOut, LOW); // Initially in Rx mode
+  digitalWrite(paBias, LOW); // Initially Finals biased off
+
 #if defined(FEATURE_I2C_LCD)  
   lcd.begin(lcdNumRows, lcdNumCols);
   //  lcd.clear(); //TODO check if this can be removed as splash will write whole screen
@@ -172,8 +175,6 @@ void setup() {
   lcd.createChar(6, p6);
   lcdPrintSplash();
 #endif
-  
-  digitalWrite(LEDpin, HIGH);  //Turn LED on
 
   //Initialize serial and wait for port to open:
   Serial.begin(115200); 
@@ -198,42 +199,45 @@ void loop() {
   // similar until
   // bit 6 holds USER6 value (0 or 1)
   // bit 7 holds PTT# value (0 or 1)
-  static byte fpgaState = 0; // On Rx, with through filter selected
-  
-  uint8_t fpgaStateTmp;
-  uint8_t cnt;
+  static byte fpgaState = 0; // Initially on Rx, with 160M HP & 12_10 LP selected
   static boolean pttChanged = true;  // Force a state write to the ptt line on switch on
   static boolean filtersChanged = true; // and same for the Tx and Rx filters
+    
+  uint8_t fpgaStateTmp = 0;
+  uint8_t cnt = 0;
 
-  // Read the inputs from fpga and temporary store
-  // DEBUG I have inverted inputs as they are held Hi by pullups
+  // Read the inputs from radio hardware and temporary store
+  // Note: I have inverted inputs as they are held Hi by pullups
   cnt = 0;
 #ifdef FEATURE_Invert_Inputs
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user0));
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user1));
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user2));
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user3));
-  bitWrite(fpgaStateTmp, cnt++, 0);
-  bitWrite(fpgaStateTmp, cnt++, 0);
-  bitWrite(fpgaStateTmp, cnt++, 0);
-  bitWrite(fpgaStateTmp, cnt, !digitalRead(pttIn));
+//  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user4));
+//  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user5));
+//  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user6));
 #else
   bitWrite(fpgaStateTmp, cnt++, digitalRead(user0));
   bitWrite(fpgaStateTmp, cnt++, digitalRead(user1));
   bitWrite(fpgaStateTmp, cnt++, digitalRead(user2));
   bitWrite(fpgaStateTmp, cnt++, digitalRead(user3));
-  bitWrite(fpgaStateTmp, cnt++, 0);
-  bitWrite(fpgaStateTmp, cnt++, 0);
-  bitWrite(fpgaStateTmp, cnt++, 0);
-  bitWrite(fpgaStateTmp, cnt, digitalRead(pttIn));
+//  bitWrite(fpgaStateTmp, cnt++, digitalRead(user4));
+//  bitWrite(fpgaStateTmp, cnt++, digitalRead(user5));
+//  bitWrite(fpgaStateTmp, cnt++, digitalRead(user6));
 #endif
+
+#ifdef FEATURE_Invert_ptt_line
+  bitWrite(fpgaStateTmp, 7, !digitalRead(pttIn));
+#else
+  bitWrite(fpgaStateTmp, 7, digitalRead(pttIn));
+    #endif
 
 
 /* We could be working crossband so if going from Rx to Tx it is important to switch the filters
    and then key the transmitter. Otherwise from Tx to Rx we unkey transmitter then switch filters.
 */
-  // See if the ptt has changed and flag if so
-//  pttChanged = false; //todo probably delete this
+// See if the ptt has changed and flag if so
   if(bitRead(fpgaState, 7) != bitRead(fpgaStateTmp, 7)) pttChanged = true;
   
   // See if the filter selection has changed and flag if so
