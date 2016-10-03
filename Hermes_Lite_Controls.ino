@@ -81,10 +81,10 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 #define pttIn          2  // Connected to CN2 pin 4, PTT#
 
 // Output Pins
-#define Filter1        4
-#define Filter2        5
-#define Filter3        6
-#define Filter4        7
+#define Filter1        3 // Data 3 = Bit 0 of Tx Filter output, connects to Filter 1 line
+#define Filter2        4
+#define Filter3        5
+#define Filter4        6 // Data 6 = Bit 3 of Tx Filter output, connects to Filter 4 line
 
 #define paBias         12
 #define pttOut         13
@@ -306,8 +306,7 @@ void switchFilters(byte filterNum) {
   txFilter = txFilterMap[filterNum],
   rxFilter = rxFilterMap[filterNum],
 
-  Serial.print(F("filterNum = "));
-  Serial.println(filterNum);
+
   Serial.print(F("txFilter = ")); Serial.print(txFilter, BIN); Serial.print(F("; and rxFilter = ")); Serial.println(rxFilter, BIN);
 
   // Shift the rxFilter data to the highest 6 bits as we are going to put bit 6 and 5 of the TX Filters
@@ -316,24 +315,30 @@ void switchFilters(byte filterNum) {
   rxFilter = rxFilter << 2;
   bitWrite(rxFilter, 1, bitRead(txFilter, 5));
   bitWrite(rxFilter, 0, bitRead(txFilter, 4));
-  txFilter = txFilter && B00000111;
+  
+  txFilter = txFilter & B00001111; // Leave only the first 4 bits
 
   digitalWrite(Llatch, LOW);
   shiftOut(Ldata, Lclock, MSBFIRST, rxFilter); // send rxFilter signals and top 2 bits of txFilter signals.
   digitalWrite(Llatch, HIGH);
-  if(bitRead(txFilter, 5)) digitalWrite(Filter1, HIGH);
+  if(bitRead(txFilter, 0)) digitalWrite(Filter1, HIGH); // copy bit 0 to Digital output
   else digitalWrite(Filter1, LOW);
-  if(bitRead(txFilter, 5)) digitalWrite(Filter2, HIGH);
+  if(bitRead(txFilter, 1)) digitalWrite(Filter2, HIGH); // and next 3 bits too.
   else digitalWrite(Filter2, LOW);
-  if(bitRead(txFilter, 5)) digitalWrite(Filter3, HIGH);
+  if(bitRead(txFilter, 2)) digitalWrite(Filter3, HIGH);
   else digitalWrite(Filter3, LOW);
-  if(bitRead(txFilter, 5)) digitalWrite(Filter4, HIGH);
+  if(bitRead(txFilter, 3)) digitalWrite(Filter4, HIGH);
   else digitalWrite(Filter4, LOW);
+  
 #ifdef DEBUG_LEVEL_3
+    Serial.println("");
+    Serial.println(F("void switchFilters(byte filterNum)"));
+    Serial.print(F("Parameter 'filterNum' = "));  Serial.println(filterNum);
     Serial.print(F("Tx Filter output = "));
     Serial.println(txFilter, BIN);
     Serial.print(F("Rx Filter output = "));
     Serial.println(rxFilter, BIN);
+    Serial.println(F("----------------------------"));
 #endif  
 }
 
