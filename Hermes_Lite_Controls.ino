@@ -55,7 +55,7 @@ N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in       (Input)
 
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
-#define CODE_VERSION "0.1.20161003"
+#define CODE_VERSION "0.1.20161005"
 
 
 // Latch stuff
@@ -244,9 +244,12 @@ void loop() {
 //  filtersChanged = false; //todo probably delete this
   if((fpgaState & B01111111) != (fpgaStateTmp & B01111111)) {
     filtersChanged = true;
-//    Serial.print("the value of user2 = "); Serial.println(digitalRead(user2));
-//    Serial.print("the value of fpgaState = "); Serial.print(fpgaState, BIN);
-//    Serial.print(" and fpgaStateTmp = "); Serial.println(fpgaStateTmp, BIN);
+  #ifdef DEBUG_INPUT_SIGNAL
+    Serial.print(F("The band has changed, the button pressed has a value of "));
+    Serial.println(fpgaStateTmp);
+//  Serial.print(digitalRead(user0)); Serial.print(", "); Serial.print(digitalRead(user1)); Serial.print(", ");
+//  Serial.print(digitalRead(user2)); Serial.print(", "); Serial.println(digitalRead(user3));
+  #endif    
   }
 
 #ifdef DEBUG_LEVEL_3
