@@ -8,8 +8,8 @@
 #define FEATURE_Invert_ptt_line   // Use for open collector driver where ptt tx is low active
 
 // Debug Defines follow here
-#define DEBUG_INPUT_SIGNAL        // Check the values arriving on User0 to User3
-//#define DEBUG_LEVEL_2
+#define DEBUG_BAND_CHANGE        // Check the values arriving on User0 to User3
+//#define DEBUG_PTT_CHANGE
 #define DEBUG_LEVEL_3
 
 // Available Transmit Filters. Edit the bit associated with the filter to suit wiring of circuit.

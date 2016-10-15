@@ -50,12 +50,9 @@ N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in       (Input)
   #include <LiquidCrystal_I2C.h>
 #endif
 
-//#include <Wire.h>
-//<LiquidCrystal_I2C.h>
-
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
-#define CODE_VERSION "0.1.20161005"
+#define CODE_VERSION "0.1.20161015"
 
 
 // Latch stuff
@@ -63,7 +60,7 @@ uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 // Shift Register for Rx Filter Pin assignments
 #define Lclock       11     // Pin 11 of 74HC595 to pin 14 of Arduino Nano
 #define Llatch       10     // Pin 12 of 74HC595 to pin 13 of Arduino Nano
-#define LEnable       9     // Pin ?? of 74HC595 to pin 11 of Arduino Nano
+#define LEnable       9     // Pin 13 of 74HC595 to pin 11 of Arduino Nano
 #define Ldata         8     // Pin 14 of 74HC595 to pin 12 of Arduino Nano
 
 
@@ -206,10 +203,11 @@ void loop() {
   uint8_t fpgaStateTmp = 0;
   uint8_t cnt = 0;
 
-  // Read the inputs from radio hardware and temporary store
-  // Note: I have inverted inputs as they are held Hi by pullups
+// Read the inputs from radio hardware and temporary store in "fpgaStateTmp"
   cnt = 0;
+  
 #ifdef FEATURE_Invert_Inputs
+// Note: I have inverted inputs as they are held Hi by pullups
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user0));
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user1));
   bitWrite(fpgaStateTmp, cnt++, !digitalRead(user2));
@@ -231,37 +229,31 @@ void loop() {
   bitWrite(fpgaStateTmp, 7, !digitalRead(pttIn));
 #else
   bitWrite(fpgaStateTmp, 7, digitalRead(pttIn));
-    #endif
+#endif
 
 
 /* We could be working crossband so if going from Rx to Tx it is important to switch the filters
    and then key the transmitter. Otherwise from Tx to Rx we unkey transmitter then switch filters.
 */
 // See if the ptt has changed and flag if so
+
   if(bitRead(fpgaState, 7) != bitRead(fpgaStateTmp, 7)) pttChanged = true;
   
-  // See if the filter selection has changed and flag if so
-//  filtersChanged = false; //todo probably delete this
-  if((fpgaState & B01111111) != (fpgaStateTmp & B01111111)) {
+// See if the filter selection has changed and flag if so
+
+  if((fpgaState & B00111111) != (fpgaStateTmp & B00111111)) {
     filtersChanged = true;
-  #ifdef DEBUG_INPUT_SIGNAL
+  #ifdef DEBUG_BAND_CHANGE
     Serial.print(F("The band has changed, the button pressed has a value of "));
-    Serial.println(fpgaStateTmp);
-//  Serial.print(digitalRead(user0)); Serial.print(", "); Serial.print(digitalRead(user1)); Serial.print(", ");
-//  Serial.print(digitalRead(user2)); Serial.print(", "); Serial.println(digitalRead(user3));
+    Serial.println(fpgaStateTmp & B00111111);
+    Serial.print(F("Input word (fpgaStateTmp) = ")); // Bit 7 is ptt bit 0-5 = User0 to User5
+    print_binary(fpgaStateTmp, 8);
+    Serial.print(F("Last state  ( fpgaState ) = "));
+    print_binary(fpgaState, 8);   
   #endif    
   }
 
-#ifdef DEBUG_LEVEL_3
-  if(pttChanged || filtersChanged) {
-    Serial.print(F("Input word = "));
-    Serial.println(fpgaStateTmp, BIN);
-    Serial.print(F("Last state = "));
-    Serial.println(fpgaState, BIN);
-  }
-#endif
-    
-  // Here is where we process any changed condition from Hermes-Lite
+// Here is where we process any changed condition from Hermes-Lite
   if(pttChanged) {
     if(bitRead(fpgaStateTmp, 7)) { //We are going from Rx to Tx
       if(filtersChanged) { // Switch them first
@@ -270,7 +262,7 @@ void loop() {
       digitalWrite(pttOut, HIGH);
       delay(PA_biasDelay);
       digitalWrite(paBias, HIGH);
-#ifdef DEBUG_LEVEL_3
+#ifdef DEBUG_PTT_CHANGE
   Serial.println(F("Going to TRANSMIT"));
 #endif  
     }
@@ -278,9 +270,9 @@ void loop() {
       digitalWrite(paBias, LOW);
       digitalWrite(pttOut, LOW);
       if(filtersChanged) { // Set correct Rx filter
-        switchFilters(fpgaStateTmp & B01111111);
+        switchFilters(fpgaStateTmp & B00111111);
       }
-#ifdef DEBUG_LEVEL_3
+#ifdef DEBUG_PTT_CHANGE
   Serial.println(F("Going to RECEIVE"));
 #endif      
     }
@@ -293,7 +285,7 @@ void loop() {
       digitalWrite(paBias, LOW);
       digitalWrite(pttOut, LOW);
     }
-    switchFilters(fpgaStateTmp & B01111111);
+    switchFilters(fpgaStateTmp & B00111111);
     fpgaState = fpgaStateTmp;
   }
   fpgaState = fpgaStateTmp;
@@ -314,7 +306,7 @@ void switchFilters(byte filterNum) {
   rxFilter = rxFilterMap[filterNum],
 
 
-  Serial.print(F("txFilter = ")); Serial.print(txFilter, BIN); Serial.print(F("; and rxFilter = ")); Serial.println(rxFilter, BIN);
+  Serial.print(F("txFilter = ")); print_binary(txFilter, 6); Serial.print(F("; and rxFilter = ")); print_binary(rxFilter, 6);
 
   // Shift the rxFilter data to the highest 6 bits as we are going to put bit 6 and 5 of the TX Filters
   // into the 1st 2 locations
@@ -342,14 +334,14 @@ void switchFilters(byte filterNum) {
     Serial.println(F("void switchFilters(byte filterNum)"));
     Serial.print(F("Parameter 'filterNum' = "));  Serial.println(filterNum);
     Serial.print(F("Tx Filter output = "));
-    Serial.println(txFilter, BIN);
+    print_binary(txFilter, 4);
     Serial.print(F("Rx Filter output = "));
-    Serial.println(rxFilter, BIN);
+    print_binary(rxFilter, 8);
     Serial.println(F("----------------------------"));
 #endif  
 }
 
-  /**********************************************************************************************************/
+/**********************************************************************************************************/
 
 int freeRam () {
   extern int __heap_start, *__brkval;
@@ -409,6 +401,36 @@ void displayAnalog(byte col, byte row, int value)
   }
 }
 #endif
+/**********************************************************************************************************/
+
+// PRINT_BINARY - Arduino
+//
+// Prints a positive integer in binary format with a fixed withdth
+//
+// copyright, Peter H Anderson, Baltimore, MD, Nov, '07
+
+void print_binary(int v, int num_places)
+{
+  int mask = 0, n;
+
+  for (n = 1; n <= num_places; n++) {
+    mask = (mask << 1) | 0x0001;
+  }
+  v = v & mask;  // truncate v to specified number of places
+  while (num_places) {
+    if (v & (0x0001 << num_places - 1)) {
+      Serial.print(F("1"));
+    }
+    else {
+      Serial.print(F("0"));
+    }
+    --num_places;
+    if (((num_places % 4) == 0) && (num_places != 0)) {
+      Serial.print(F("_"));
+    }
+  }
+}
+
 /**********************************************************************************************************/
 
 
