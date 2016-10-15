@@ -159,7 +159,7 @@ void setup() {
   digitalWrite(pttOut, LOW); // Initially in Rx mode
   digitalWrite(paBias, LOW); // Initially Finals biased off
 
-#if defined(FEATURE_I2C_LCD)  
+#ifdef FEATURE_I2C_LCD 
   lcd.begin(lcdNumRows, lcdNumCols);
   //  lcd.clear(); //TODO check if this can be removed as splash will write whole screen
   // -- do some delay: some times I've got broken visualization
@@ -173,62 +173,64 @@ void setup() {
   lcdPrintSplash();
 #endif
 
-  //Initialize serial and wait for port to open:
+#ifdef DEBUG_ENABLED
+//Initialize serial and wait for port to open:
   Serial.begin(115200); 
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
-  Serial.println(F("Arduino Hermes-Lite control line expander ver 0.1.0"));
+  Serial.println(F("Arduino Hermes-Lite control line expander"));
   Serial.println(F("Copyright (C) 2015, Graeme Jury ZL2APV"));
   Serial.print(F("Code Version = "));
   Serial.println(CODE_VERSION);
   Serial.print(F("available RAM = "));
   Serial.println(freeRam());
   Serial.println();
+#endif  
 }
 /**********************************************************************************************************/
 /* The main loop spends most of its time polling the control data lines from Hermes-Lite. Subroutines
    should be written to be non blocking. PTT is on an interrupt for instant response.
 */   
 void loop() {
-  // bit values for fpgaState ...
+  // bit values for controlData ...
   // bit 0 holds USER0 value (0 or 1)
   // similar until
   // bit 6 holds USER6 value (0 or 1)
   // bit 7 holds PTT# value (0 or 1)
-  static byte fpgaState = 0; // Initially on Rx, with 160M HP & 12_10 LP selected
+  static byte controlData = 0; // Initially on Rx, with 160M HP & 12_10 LP selected
   static boolean pttChanged = true;  // Force a state write to the ptt line on switch on
   static boolean filtersChanged = true; // and same for the Tx and Rx filters
     
-  uint8_t fpgaStateTmp = 0;
+  uint8_t controlDataTmp = 0;
   uint8_t cnt = 0;
 
-// Read the inputs from radio hardware and temporary store in "fpgaStateTmp"
+// Read the inputs from radio hardware and temporary store in "controlDataTmp"
   cnt = 0;
   
 #ifdef FEATURE_Invert_Inputs
 // Note: I have inverted inputs as they are held Hi by pullups
-  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user0));
-  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user1));
-  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user2));
-  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user3));
-//  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user4));
-//  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user5));
-//  bitWrite(fpgaStateTmp, cnt++, !digitalRead(user6));
+  bitWrite(controlDataTmp, cnt++, !digitalRead(user0));
+  bitWrite(controlDataTmp, cnt++, !digitalRead(user1));
+  bitWrite(controlDataTmp, cnt++, !digitalRead(user2));
+  bitWrite(controlDataTmp, cnt++, !digitalRead(user3));
+//  bitWrite(controlDataTmp, cnt++, !digitalRead(user4));
+//  bitWrite(controlDataTmp, cnt++, !digitalRead(user5));
+//  bitWrite(controlDataTmp, cnt++, !digitalRead(user6));
 #else
-  bitWrite(fpgaStateTmp, cnt++, digitalRead(user0));
-  bitWrite(fpgaStateTmp, cnt++, digitalRead(user1));
-  bitWrite(fpgaStateTmp, cnt++, digitalRead(user2));
-  bitWrite(fpgaStateTmp, cnt++, digitalRead(user3));
-//  bitWrite(fpgaStateTmp, cnt++, digitalRead(user4));
-//  bitWrite(fpgaStateTmp, cnt++, digitalRead(user5));
-//  bitWrite(fpgaStateTmp, cnt++, digitalRead(user6));
+  bitWrite(controlDataTmp, cnt++, digitalRead(user0));
+  bitWrite(controlDataTmp, cnt++, digitalRead(user1));
+  bitWrite(controlDataTmp, cnt++, digitalRead(user2));
+  bitWrite(controlDataTmp, cnt++, digitalRead(user3));
+//  bitWrite(controlDataTmp, cnt++, digitalRead(user4));
+//  bitWrite(controlDataTmp, cnt++, digitalRead(user5));
+//  bitWrite(controlDataTmp, cnt++, digitalRead(user6));
 #endif
 
 #ifdef FEATURE_Invert_ptt_line
-  bitWrite(fpgaStateTmp, 7, !digitalRead(pttIn));
+  bitWrite(controlDataTmp, 7, !digitalRead(pttIn));
 #else
-  bitWrite(fpgaStateTmp, 7, digitalRead(pttIn));
+  bitWrite(controlDataTmp, 7, digitalRead(pttIn));
 #endif
 
 
@@ -237,27 +239,27 @@ void loop() {
 */
 // See if the ptt has changed and flag if so
 
-  if(bitRead(fpgaState, 7) != bitRead(fpgaStateTmp, 7)) pttChanged = true;
+  if(bitRead(controlData, 7) != bitRead(controlDataTmp, 7)) pttChanged = true;
   
 // See if the filter selection has changed and flag if so
 
-  if((fpgaState & B00111111) != (fpgaStateTmp & B00111111)) {
+  if((controlData & B00111111) != (controlDataTmp & B00111111)) {
     filtersChanged = true;
   #ifdef DEBUG_BAND_CHANGE
     Serial.print(F("The band has changed, the button pressed has a value of "));
-    Serial.println(fpgaStateTmp & B00111111);
-    Serial.print(F("Input word (fpgaStateTmp) = ")); // Bit 7 is ptt bit 0-5 = User0 to User5
-    print_binary(fpgaStateTmp, 8);
-    Serial.print(F("Last state  ( fpgaState ) = "));
-    print_binary(fpgaState, 8);   
+    Serial.println(controlDataTmp & B00111111);
+    Serial.print(F("Input word (controlDataTmp) = ")); // Bit 7 is ptt bit 0-5 = User0 to User5
+    print_binary(controlDataTmp, 8); Serial.println();
+    Serial.print(F("Last state  ( controlData ) = "));
+    print_binary(controlData, 8); Serial.println(); 
   #endif    
   }
 
 // Here is where we process any changed condition from Hermes-Lite
   if(pttChanged) {
-    if(bitRead(fpgaStateTmp, 7)) { //We are going from Rx to Tx
+    if(bitRead(controlDataTmp, 7)) { //We are going from Rx to Tx
       if(filtersChanged) { // Switch them first
-        switchFilters(fpgaStateTmp & B01111111);
+        switchFilters(controlDataTmp & B01111111);
       }
       digitalWrite(pttOut, HIGH);
       delay(PA_biasDelay);
@@ -270,25 +272,25 @@ void loop() {
       digitalWrite(paBias, LOW);
       digitalWrite(pttOut, LOW);
       if(filtersChanged) { // Set correct Rx filter
-        switchFilters(fpgaStateTmp & B00111111);
+        switchFilters(controlDataTmp & B00111111);
       }
 #ifdef DEBUG_PTT_CHANGE
   Serial.println(F("Going to RECEIVE"));
 #endif      
     }
-    fpgaState = fpgaStateTmp;
+    controlData = controlDataTmp;
     filtersChanged = false;
     pttChanged = false;
   }
   if(filtersChanged) {
-    if(bitRead(fpgaStateTmp, 7)) { //Go back to Rx as switching filters while Tx is an error condition
+    if(bitRead(controlDataTmp, 7)) { //Go back to Rx as switching filters while Tx is an error condition
       digitalWrite(paBias, LOW);
       digitalWrite(pttOut, LOW);
     }
-    switchFilters(fpgaStateTmp & B00111111);
-    fpgaState = fpgaStateTmp;
+    switchFilters(controlDataTmp & B00111111);
+    controlData = controlDataTmp;
   }
-  fpgaState = fpgaStateTmp;
+  controlData = controlDataTmp;
   filtersChanged = false;
   pttChanged = false;
 }
@@ -297,16 +299,20 @@ void loop() {
 // Subroutines start here
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void switchFilters(byte filterNum) {
+void switchFilters(byte bandNum) {
 
   uint8_t txFilter;
   uint8_t rxFilter;
   
-  txFilter = txFilterMap[filterNum],
-  rxFilter = rxFilterMap[filterNum],
+  txFilter = txFilterMap[bandNum],
+  rxFilter = rxFilterMap[bandNum],
 
-
+#ifdef DEBUG_SHOW_FILTER_SWITCH_SIGNALS
+  Serial.println();
+  Serial.println(F("void switchFilters(byte bandNum)"));
   Serial.print(F("txFilter = ")); print_binary(txFilter, 6); Serial.print(F("; and rxFilter = ")); print_binary(rxFilter, 6);
+  Serial.println();
+#endif  
 
   // Shift the rxFilter data to the highest 6 bits as we are going to put bit 6 and 5 of the TX Filters
   // into the 1st 2 locations
@@ -329,14 +335,12 @@ void switchFilters(byte filterNum) {
   if(bitRead(txFilter, 3)) digitalWrite(Filter4, HIGH);
   else digitalWrite(Filter4, LOW);
   
-#ifdef DEBUG_LEVEL_3
-    Serial.println("");
-    Serial.println(F("void switchFilters(byte filterNum)"));
-    Serial.print(F("Parameter 'filterNum' = "));  Serial.println(filterNum);
+#ifdef DEBUG_SHOW_FILTER_SWITCH_SIGNALS
+    Serial.print(F("Parameter 'bandNum' = "));  Serial.println(bandNum);
     Serial.print(F("Tx Filter output = "));
     print_binary(txFilter, 4);
-    Serial.print(F("Rx Filter output = "));
-    print_binary(rxFilter, 8);
+    Serial.print(F(", Rx Filter output = "));
+    print_binary(rxFilter, 8); Serial.println();
     Serial.println(F("----------------------------"));
 #endif  
 }
