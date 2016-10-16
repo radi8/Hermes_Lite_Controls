@@ -46,6 +46,8 @@ const uint8_t HP15_10 = 16; // Operated = 15-10M. Bit 4 Hi
 #if defined(FEATURE_Quisk)
 
 const uint8_t txFilterMap[16] = {
+// Filter   Button  Band          Selected
+// ------   ------  ----          --------  
   LP12_10,  // 0,   No band,      10 metre Lo Pass only filter selected
   LPthru,   // 1,   137 KHz band, thru filter selected
   LP160,    // 2,   160 M band,   LP160 plus LP12_10M filters selected
@@ -65,6 +67,8 @@ const uint8_t txFilterMap[16] = {
 };
 
 const uint8_t rxFilterMap[16] = {
+// Filter   Button  Band          Selected
+// ------   ------  ----          --------  
   HP160,    // 0,   No band,      HP160 only filter selected
   HPthru,   // 1,   137 KHz band, thru filter selected
   HP160,    // 2,   160 M band,   HP160 only filter selected
