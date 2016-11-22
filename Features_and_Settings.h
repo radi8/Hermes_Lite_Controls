@@ -17,16 +17,14 @@
 // Up to 7 filters may be controlled with bit 0 being a special case where when it is released the
 // roofing filter is switched in and when it is operated it is in thru mode where all the filters are
 // bypassed. 
-// bit 0
-const uint8_t LP12_10 = 0;  // Bit 0 clear = 10M filter in circuit
-const uint8_t LPthru  = 1;  // Bit 0 set = thru mode
 
-const uint8_t LP160   = 2;  // Bit 1 set = 160M filter selected. Bit 1 clear = filter not selected
-const uint8_t LP80    = 4;  // Bit 2 set = 160M filter selected. Bit 2 clear = filter not selected
-const uint8_t LP60_40 = 8;  // Bit 3 set = 60/40M filter selected. Bit 3 clear = filter not selected
-const uint8_t LP30_20 = 16; // Bit 4 set = 30/20M filter selected. Bit 4 clear = filter not selected
-const uint8_t LP17_15 = 32; // Bit 5 set = 17/15M filter selected. Bit 5 clear = filter not selected
-
+const uint8_t LP12_10 = 0;  // All Band bits clear = 10M filter in circuit and all other filters out.
+const uint8_t LP160   = 1;  // Band 1 set = 160M filter selected. Bit 1 clear = filter not selected
+const uint8_t LP80    = 2;  // Band 2 set = 160M filter selected. Bit 2 clear = filter not selected
+const uint8_t LP60_40 = 4;  // Band 3 set = 60/40M filter selected. Bit 3 clear = filter not selected
+const uint8_t LP30_20 = 8;  // Band 4 set = 30/20M filter selected. Bit 4 clear = filter not selected
+const uint8_t LP17_15 = 16; // Band 5 set = 17/15M filter selected. Bit 5 clear = filter not selected
+const uint8_t LPthru  = 32; // Band 6 set = thru mode. Bit 6 clear = 10M in circuit as roofing filter.
 
 // Available Receive Filters. Edit the bit associated with the filter to suit wiring of circuit
 
@@ -45,11 +43,12 @@ const uint8_t HP15_10 = 16; // Operated = 15-10M. Bit 4 Hi
 
 #if defined(FEATURE_Quisk)
 
+// Here we map the button clicked to the band relay
 const uint8_t txFilterMap[16] = {
 // Filter   Button  Band          Selected
 // ------   ------  ----          --------  
   LP12_10,  // 0,   No band,      10 metre Lo Pass only filter selected
-  LPthru,   // 1,   137 KHz band, thru filter selected
+  LP160,    // 1,   500 KHz band, thru filter selected
   LP160,    // 2,   160 M band,   LP160 plus LP12_10M filters selected
   LP80,     // 3,   80 M band,    LP80 plus LP12_10M filters selected
   LP60_40,  // 4,   60 M band,    LP60_40 plus LP12_10M filters selected

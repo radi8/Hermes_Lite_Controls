@@ -52,7 +52,7 @@ N/C               | [ ]A7              INT0/D2[ ] |   D2 PTT in       (Input)
 
 uint8_t * heapptr, * stackptr;  // I declared these globally for memory checks
 
-#define CODE_VERSION "0.1.20161015"
+#define CODE_VERSION "0.5.20161122"
 
 
 // Latch stuff
