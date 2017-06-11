@@ -10,7 +10,9 @@ build was pioneered by Rob Frohne KL7NA. From there numerous others have joined 
 changing project.
 
 RESOURCES
-Hermes-Lite wiki            ... https://github.com/softerhardware/Hermes-Lite/wiki
+Main Hermes-Lite page       ... http://www.hermeslite.com/
+Hermes-Lite 1.x Wiki        ... https://github.com/softerhardware/Hermes-Lite/wiki
+Hermes-Lite 2.x Wiki        ... https://github.com/softerhardware/Hermes-Lite2/wiki
 Hermes-Lite circuit diagram ... https://github.com/softerhardware/Hermes-Lite/blob/master/pcb/hermeslite.pdf
 Front end circuit diagram   ... https://github.com/softerhardware/Hermes-Lite/raw/master/frontend/basic/frontend.pdf
 HL Protocol matching Hermes ... https://github.com/softerhardware/Hermes-Lite/wiki/Protocol-Coverage
